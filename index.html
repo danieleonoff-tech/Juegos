@@ -451,6 +451,10 @@ async function loadData(){
     const json = await res.json();
     if(json){
       DATA = json;
+      let needsFix = false;
+      if(!Array.isArray(DATA.games)){ DATA.games = ['Truco','FIFA','Póker']; needsFix = true; }
+      if(!Array.isArray(DATA.matches)){ DATA.matches = []; needsFix = true; }
+      if(needsFix) await saveData();
     } else {
       DATA = { games:['Truco','FIFA','Póker'], matches:[] };
       await saveData();
