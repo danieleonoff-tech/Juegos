@@ -443,11 +443,14 @@ function showToast(msg){
   toastTimer = setTimeout(()=>t.classList.remove('show'), 1700);
 }
 
+const FIREBASE_URL = 'https://juegos-40626-default-rtdb.firebaseio.com';
+
 async function loadData(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    if(res && res.value){
-      DATA = JSON.parse(res.value);
+    const res = await fetch(`${FIREBASE_URL}/${STORAGE_KEY}.json`);
+    const json = await res.json();
+    if(json){
+      DATA = json;
     } else {
       DATA = { games:['Truco','FIFA','Póker'], matches:[] };
       await saveData();
@@ -460,7 +463,11 @@ async function loadData(){
 
 async function saveData(){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true);
+    await fetch(`${FIREBASE_URL}/${STORAGE_KEY}.json`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(DATA)
+    });
   }catch(e){
     console.error('No se pudo guardar', e);
   }
