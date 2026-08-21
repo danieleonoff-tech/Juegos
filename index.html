@@ -428,6 +428,7 @@ let DATA = { games: [], matches: [] };
 let selectedParticipants = [...PLAYERS];
 let currentTab = 'nueva';
 let confirmingReset = false;
+let confirmingDeleteId = null;
 
 function fmt(n){
   const sign = n<0 ? '-' : '';
@@ -748,6 +749,7 @@ function renderHistorial(){
     const perLoser = m.amount / losers.length;
     const detail = losers.map(l=>`${l} → <span class="win">${m.winner}</span>: ${fmt(perLoser)}`).join(' &nbsp;|&nbsp; ');
     const date = new Date(m.date).toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
+    const isConfirming = confirmingDeleteId === m.id;
     return `
       <div class="match">
         <div class="match-top">
@@ -756,6 +758,13 @@ function renderHistorial(){
         </div>
         <div class="match-detail"><span class="win">${m.winner}</span> ganó $${m.amount.toLocaleString('es-AR')} en total</div>
         <div class="match-detail">${detail}</div>
+        ${isConfirming ? `
+          <div class="hint" style="margin:8px 0 4px;">¿Eliminar esta partida? No se puede deshacer.</div>
+          <div style="display:flex; gap:14px;">
+            <button class="del-match" data-confirm-del="${m.id}">Sí, eliminar</button>
+            <button class="del-match" style="color:var(--ink-soft);" data-cancel-del="${m.id}">Cancelar</button>
+          </div>
+        ` : `<button class="del-match" data-ask-del="${m.id}">Eliminar</button>`}
       </div>
     `;
   }).join('');
@@ -800,7 +809,7 @@ function render(){
 function attachHandlers(){
   document.querySelectorAll('.tab').forEach(t=>{
     t.classList.toggle('active', t.dataset.tab===currentTab);
-    t.onclick = ()=>{ currentTab = t.dataset.tab; confirmingReset = false; render(); };
+    t.onclick = ()=>{ currentTab = t.dataset.tab; confirmingReset = false; confirmingDeleteId = null; render(); };
   });
 
   if(currentTab==='nueva'){
@@ -840,7 +849,22 @@ function attachHandlers(){
   }
 
   if(currentTab==='historial'){
-    // sin acciones adicionales
+    document.querySelectorAll('[data-ask-del]').forEach(btn=>{
+      btn.onclick = ()=>{ confirmingDeleteId = btn.dataset.askDel; render(); };
+    });
+    document.querySelectorAll('[data-cancel-del]').forEach(btn=>{
+      btn.onclick = ()=>{ confirmingDeleteId = null; render(); };
+    });
+    document.querySelectorAll('[data-confirm-del]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const id = btn.dataset.confirmDel;
+        DATA.matches = DATA.matches.filter(m=>m.id!==id);
+        confirmingDeleteId = null;
+        await saveData();
+        render();
+        showToast('✓ Partida eliminada');
+      };
+    });
   }
 
   if(currentTab==='balance'){
