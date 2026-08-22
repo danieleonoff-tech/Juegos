@@ -391,6 +391,68 @@
   }
   .loading{color:var(--felt-light); text-align:center; padding:60px 0; font-family:var(--font-mono); font-size:13px; letter-spacing:.1em; line-height:1.8; text-transform:uppercase;}
 
+  /* ---------- Diario de la quiebra ---------- */
+  .newspaper-overlay{
+    position:fixed; inset:0; z-index:100; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(3,4,6,.72); backdrop-filter:blur(2px);
+    padding:24px; cursor:pointer;
+  }
+  .newspaper-overlay.show{display:flex;}
+  .newspaper{
+    width:min(320px, 88vw);
+    background:linear-gradient(180deg,#f4efe1,#e9e2cd);
+    color:#181510;
+    border-radius:4px;
+    padding:18px 18px 22px;
+    box-shadow:0 30px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.15);
+    transform:scale(0) rotate(0deg); opacity:0;
+    font-family:'JetBrains Mono', monospace;
+    cursor:pointer;
+    position:relative;
+  }
+  .newspaper-overlay.show .newspaper{
+    animation:newspaperPop 2s linear forwards;
+  }
+  @keyframes newspaperPop{
+    0%{ transform:scale(0) rotate(0deg); opacity:0; filter:blur(14px); }
+    8%{ transform:scale(1.1) rotate(220deg); opacity:1; filter:blur(12px); }
+    85%{ transform:scale(1.05) rotate(1750deg); filter:blur(10px); }
+    93%{ transform:scale(1.02) rotate(1790deg); filter:blur(4px); }
+    100%{ transform:scale(1) rotate(1800deg); opacity:1; filter:blur(0px); }
+  }
+  .newspaper::before{
+    content:''; position:absolute; inset:6px;
+    border:1px solid rgba(0,0,0,.25); pointer-events:none;
+  }
+  .np-eyebrow{
+    font-size:10px; letter-spacing:.25em; text-transform:uppercase;
+    text-align:center; opacity:.75; margin-bottom:4px;
+  }
+  .np-mast{
+    font-family:'Space Grotesk', serif; font-weight:700; font-size:26px;
+    text-align:center; letter-spacing:.04em; border-bottom:3px double #181510;
+    border-top:3px double #181510; padding:4px 0; margin-bottom:10px;
+  }
+  .np-first{
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:15px;
+    letter-spacing:.08em; text-align:center; color:#c81212;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);
+    margin:2px 0 6px; transform:rotate(-2deg);
+  }
+  .np-headline{
+    font-family:'Space Grotesk', serif; font-weight:700; font-size:19px;
+    line-height:1.28; text-align:center; margin:10px 0 12px;
+  }
+  .np-sub{
+    font-size:12px; text-align:center; opacity:.85; line-height:1.5;
+    border-top:1px solid rgba(0,0,0,.25); padding-top:8px;
+  }
+  .np-tap{
+    font-size:10px; text-align:center; margin-top:12px; letter-spacing:.15em;
+    text-transform:uppercase; opacity:.55;
+  }
+
   .toast{
     position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(8px);
     background:var(--metal); color:var(--felt-light); border:1px solid #454a58;
@@ -474,6 +536,17 @@
   <div id="content" class="loading">Cargando...</div>
 
   <div id="toast" class="toast"></div>
+
+  <div id="newspaper-overlay" class="newspaper-overlay">
+    <div class="newspaper" id="newspaper-card">
+      <div class="np-eyebrow">Edición extraordinaria</div>
+      <div class="np-mast">EL QUEBRADO</div>
+      <div class="np-first">¡PRIMERA PLANA!</div>
+      <div class="np-headline" id="np-headline"></div>
+      <div class="np-sub" id="np-sub"></div>
+      <div class="np-tap">Toca para cerrar</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -511,6 +584,50 @@ function showToast(msg, opts={}){
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{ t.classList.remove('show'); t.classList.remove('toast-fancy'); }, opts.coin ? 2100 : 1700);
+}
+
+const NP_HEADLINES = [
+  (l,g,a) => `${l} PIERDE ${a} Y AHORA SÍ ESTÁ QUEBRADO`,
+  (l,g,a) => `TRAS DESASTRE EN ${g.toUpperCase()}, ${l} DECRETA QUIEBRA TÉCNICA`,
+  (l,g,a) => `ECONOMISTAS CONFIRMAN: LA CARTERA DE ${l} ENTRÓ EN DUELO`,
+  (l,g,a) => `${l} VENDE UN RIÑÓN PARA PAGAR LOS ${a} QUE DEBE`,
+  (l,g,a) => `SE BUSCA: LA DIGNIDAD DE ${l}, VISTA POR ÚLTIMA VEZ ANTES DE ${g.toUpperCase()}`,
+  (l,g,a) => `${l} PASA DE CLASE MEDIA A MENDIGO PROFESIONAL EN TIEMPO RÉCORD`,
+  (l,g,a) => `ANÁLISIS: ¿PUEDE ${l} SEGUIR LLAMÁNDOSE JUGADOR DESPUÉS DE ESTO?`,
+  (l,g,a) => `HISTÓRICO: ${l} BATE SU PROPIO RÉCORD DE VERGÜENZA EN ${g.toUpperCase()}`,
+  (l,g,a) => `${l} DECLARA A LA PRENSA: "TODO EL DINERO, TODA LA VIDA, SE FUE EN UN INSTANTE"`,
+  (l,g,a) => `FMI ENVÍA AYUDA HUMANITARIA A ${l} TRAS PARTIDA DE ${g.toUpperCase()}`,
+  (l,g,a) => `${l} INGRESA AL LIBRO GUINNESS: LA PEOR RACHA JAMÁS REGISTRADA`,
+  (l,g,a) => `ÚLTIMA HORA: ${l} PIDE PRÉSTAMO PARA PAGAR SUS PROPIAS DEUDAS`,
+];
+const NP_SUBS = [
+  m => `${m.winner} se llevó todo, ${m.perLoser} le costó a cada uno.`,
+  m => `Testigos dicen que ${m.losers[0]} palideció al ver el resultado.`,
+  m => `Fuentes cercanas al perdedor piden discreción. No la habrá.`,
+  m => `${m.winner} celebra; el resto reconsidera su vida entera.`,
+  m => `Se espera que la deuda se pague antes del fin del mundo.`,
+];
+
+function showNewspaper(m){
+  const overlay = document.getElementById('newspaper-overlay');
+  const headlineEl = document.getElementById('np-headline');
+  const subEl = document.getElementById('np-sub');
+  const losers = m.participants.filter(p=>p!==m.winner);
+  const perLoser = fmt(m.amount / losers.length);
+  const loserNames = losers.join(' y ');
+  const template = NP_HEADLINES[Math.floor(Math.random()*NP_HEADLINES.length)];
+  const subTemplate = NP_SUBS[Math.floor(Math.random()*NP_SUBS.length)];
+  headlineEl.textContent = template(loserNames, m.game, fmt(m.amount));
+  subEl.textContent = subTemplate({winner:m.winner, losers, perLoser});
+
+  overlay.classList.remove('show');
+  document.getElementById('newspaper-card').style.animation = 'none';
+  void overlay.offsetWidth;
+  document.getElementById('newspaper-card').style.animation = '';
+  overlay.classList.add('show');
+
+  const hide = () => overlay.classList.remove('show');
+  overlay.onclick = hide;
 }
 
 const FIREBASE_URL = 'https://juegos-40626-default-rtdb.firebaseio.com';
@@ -919,15 +1036,19 @@ function attachHandlers(){
       const game = document.getElementById('game-select').value;
       const amount = parseFloat(document.getElementById('amount-input').value);
       const winner = document.querySelector('input[name=winner]:checked').value;
-      DATA.matches.push({
+      const newMatch = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
         game, amount, participants: [...selectedParticipants], winner
-      });
+      };
+      DATA.matches.push(newMatch);
       await saveData();
       selectedGame = game;
       render();
       showToast('✓ Partida registrada', {coin:true});
+      if(amount >= 4000){
+        showNewspaper(newMatch);
+      }
     };
 
     renderWinnerGroup();
